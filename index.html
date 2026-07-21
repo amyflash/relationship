@@ -9,19 +9,24 @@
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 <style>
 :root{
-    --stage-bg-1:#0b0c12;
-    --stage-bg-2:#05060a;
-    --panel-bg:#12141c;
-    --panel-bg-2:#191c26;
-    --hairline:rgba(201,162,75,0.16);
-    --gold:#c9a24b;
-    --gold-soft:rgba(201,162,75,0.55);
-    --gold-dim:rgba(201,162,75,0.12);
-    --ink:#f0ece0;
-    --ink-dim:#9096a5;
-    --ink-faint:#5d6272;
-    --lead-red:#d6524a;
-    --support-gray:#6a7086;
+    --stage-bg-1:#0c1224;
+    --stage-bg-2:#04060e;
+    --panel-bg:#0f1421;
+    --panel-bg-2:#161c2c;
+    --hairline:rgba(94,213,212,0.14);
+    --gold:#e8b96e;
+    --gold-soft:rgba(232,185,110,0.55);
+    --gold-dim:rgba(232,185,110,0.12);
+    --teal:#5eead4;
+    --teal-soft:rgba(94,213,212,0.55);
+    --teal-dim:rgba(94,213,212,0.12);
+    --coral:#ef7b7b;
+    --coral-soft:rgba(239,123,123,0.55);
+    --ink:#eef2f7;
+    --ink-dim:#8a93a8;
+    --ink-faint:#555c6e;
+    --lead-red:#ef7b7b;
+    --support-gray:#5b6478;
     --radius:10px;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -170,13 +175,13 @@ body{
 .legend-list{ display:flex; flex-direction:column; gap:9px; }
 .legend-item{ display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--ink-dim); }
 .legend-swatch{ flex:none; width:22px; height:0; border-top-width:4px; border-top-style:solid; border-radius:2px; }
-.legend-swatch.lead{ border-color:var(--lead-red); }
-.legend-swatch.support{ border-color:var(--support-gray); }
+.legend-swatch.lead{ border-color:var(--gold); }
+.legend-swatch.support{ border-color:rgba(232,185,110,0.45); }
 .legend-dot-scale{
     flex:none;
     display:flex; align-items:center; gap:4px;
 }
-.legend-dot-scale span{ border-radius:50%; background:linear-gradient(135deg,var(--support-gray),var(--gold)); display:block; }
+.legend-dot-scale span{ border-radius:50%; background:linear-gradient(135deg,var(--teal),var(--gold),var(--coral)); display:block; }
 .legend-dot-scale span:nth-child(1){ width:8px; height:8px; }
 .legend-dot-scale span:nth-child(2){ width:13px; height:13px; }
 .legend-dot-scale span:nth-child(3){ width:19px; height:19px; }
@@ -192,10 +197,34 @@ button{
     letter-spacing:1px;
     background:transparent;
     color:var(--gold);
-    transition:background .2s, color .2s;
+    transition:background .2s, color .2s, border-color .2s;
     font-family:"Noto Sans SC",sans-serif;
 }
 #reloadBtn:hover{ background:var(--gold); color:#1b1305; }
+
+/* 筛选按钮组 */
+.filter-group{ display:flex; gap:8px; }
+.filter-btn{
+    flex:1;
+    height:36px;
+    border:1px solid var(--teal-soft);
+    border-radius:var(--radius);
+    background:transparent;
+    color:var(--teal);
+    font-size:12px;
+    letter-spacing:0.5px;
+    cursor:pointer;
+    transition:background .2s, color .2s, border-color .2s;
+    font-family:"Noto Sans SC",sans-serif;
+}
+.filter-btn:hover{ background:var(--teal-dim); }
+.filter-btn.active{
+    background:var(--teal);
+    color:#06231f;
+    border-color:var(--teal);
+    box-shadow:0 0 14px rgba(94,213,212,0.45);
+}
+.filter-hint{ font-size:11px; color:var(--ink-faint); margin-top:6px; line-height:1.6; }
 
 .desc{
     font-size:11.5px;
@@ -219,7 +248,7 @@ button{
     flex:1;
     height:100%;
     background:
-        radial-gradient(ellipse 70% 60% at 50% 42%, rgba(201,162,75,0.07), transparent 70%),
+        radial-gradient(ellipse 70% 60% at 50% 42%, rgba(94,213,212,0.06), transparent 70%),
         radial-gradient(ellipse 120% 90% at 50% 50%, var(--stage-bg-1), var(--stage-bg-2));
 }
 .stage::before{
@@ -288,9 +317,25 @@ button{
                 <div class="legend-item"><span class="legend-swatch support"></span>含配角的合作</div>
                 <div class="legend-item">
                     <span class="legend-dot-scale"><span></span><span></span><span></span></span>
-                    节点大小 / 颜色 = 参演作品数
+                    节点大小 = 参演作品数
+                </div>
+                <div class="legend-item">
+                    <span class="legend-swatch" style="border-color:var(--teal); border-top-width:5px;"></span>
+                    多次合作高亮
                 </div>
             </div>
+        </div>
+
+        <hr class="divider">
+
+        <div>
+            <div class="section-title">合作次数筛选</div>
+            <div class="filter-group" style="margin-top:10px;">
+                <button class="filter-btn active" data-threshold="0">全部</button>
+                <button class="filter-btn" data-threshold="2" data-mode="eq">2 次</button>
+                <button class="filter-btn" data-threshold="3" data-mode="gte">≥3 次</button>
+            </div>
+            <div class="filter-hint" id="filterHint">高亮多次合作的演员与作品边</div>
         </div>
 
         <hr class="divider">
@@ -344,7 +389,10 @@ toggleBtn.addEventListener('click', ()=>{
 let nodesCache = [];
 let linksCache = [];
 let adjacencyCache = new Map();
+let pairMapCache = new Map();
 let focusedName = null;
+let filterThreshold = 0;
+let filterMode = 'gte';
 
 // 读取外部json并渲染
 async function loadAndRender() {
@@ -383,15 +431,20 @@ function renderGraph(rawActors, rawLinks){
             symbolSize: size,
             value: cnt,
             totalWork: cnt,
-            label:{
-                fontSize: Math.min(11 + cnt, 16)
-            }
+            itemStyle: {
+            color: "transparent" // 节点创建时直接镂空，首次渲染生效
+        },
+        label:{
+            fontSize: Math.min(11 + cnt, 16)
+        }
         }
     });
     nodesCache = nodes;
-
-    const counts = nodes.map(n=>n.totalWork);
-    const maxWork = Math.max(1, ...counts);
+    // 快照每个节点的初始 label / itemStyle，供高亮/筛选/搜索复位使用
+    nodes.forEach(n=>{
+        n._baseLabel = { show:true, fontSize:n.label.fontSize };
+        n._baseItemStyle = Object.assign({}, n.itemStyle);
+    });
 
     // 更新统计面板
     document.getElementById('statActors').textContent = nodes.length;
@@ -422,19 +475,19 @@ function renderGraph(rawActors, rawLinks){
         }
     });
 
-    // 组装连线样式
+    // 组装连线样式（统一金色 + 金色辉光，宽度/透明度区分主配角）
     const links = rawLinks.map((link, idx)=>{
         const isLead = link.sourceRole === "主役" && link.targetRole === "主役";
-        const lineStyle = isLead
-            ? { width:5.5, color:"#d6524a", opacity:0.8 }
-            : { width:3.5, color:"#6a7086", opacity:0.65 };
+            const lineStyle = isLead
+        ? { width:5.5, color:"#e8b96e", opacity:0.85, shadowBlur:8, shadowColor:"rgba(232,185,110,0.55)" }
+        : { width:3.2, color:"#e8b96e", opacity:0.6, shadowBlur:5, shadowColor:"rgba(232,185,110,0.35)" };
 
         const names = [link.source, link.target].sort();
         const key = names.join('|');
         const arr = pairMap.get(key);
         const pos = arr.indexOf(idx);
         lineStyle.curveness = curveConfig[key][pos];
-        return {...link, lineStyle, _baseOpacity: lineStyle.opacity, _baseWidth: lineStyle.width}
+        return {...link, lineStyle, _baseLineStyle: Object.assign({}, lineStyle)}
     });
     linksCache = links;
 
@@ -446,41 +499,25 @@ function renderGraph(rawActors, rawLinks){
         adjacencyCache.get(l.source).add(l.target);
         adjacencyCache.get(l.target).add(l.source);
     });
+    pairMapCache = pairMap;
 
     const option = {
         backgroundColor:"transparent",
         tooltip:{
             trigger:"item",
-            backgroundColor:"rgba(18,20,28,0.94)",
-            borderColor:"rgba(201,162,75,0.4)",
+            backgroundColor:"rgba(15,20,33,0.94)",
+            borderColor:"rgba(94,213,212,0.4)",
             borderWidth:1,
             padding:[10,14],
             extraCssText:"border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.45);",
-            textStyle:{ color:"#f0ece0", fontSize:12.5, fontFamily:'"Noto Sans SC",sans-serif' },
+            textStyle:{ color:"#eef2f7", fontSize:12.5, fontFamily:'"Noto Sans SC",sans-serif' },
             formatter(params){
                 if(params.dataType === 'node'){
-                    return `<div style="font-family:'Noto Serif SC',serif;font-size:14px;color:#c9a24b;margin-bottom:4px;">${params.data.name}</div>参演作品总数：<b style="color:#f0ece0;">${params.data.totalWork}</b> 部`;
+                    return `<div style="font-family:'Noto Serif SC',serif;font-size:14px;color:#e8b96e;margin-bottom:4px;">${params.data.name}</div>参演作品总数：<b style="color:#eef2f7;">${params.data.totalWork}</b> 部`;
                 }
                 const d = params.data;
-                return `<div style="font-family:'Noto Serif SC',serif;font-size:13.5px;color:#c9a24b;margin-bottom:6px;">${d.workName || '合作作品'}</div>${d.source}：${d.sourceRole || '—'}<br>${d.target}：${d.targetRole || '—'}`;
+                return `<div style="font-family:'Noto Serif SC',serif;font-size:13.5px;color:#e8b96e;margin-bottom:6px;">${d.workName || '合作作品'}</div>${d.source}：${d.sourceRole || '—'}<br>${d.target}：${d.targetRole || '—'}`;
             }
-        },
-        visualMap:{
-            type:"continuous",
-            min:0,
-            max:maxWork,
-            dimension:0,
-            seriesIndex:0,
-            calculable:false,
-            orient:"horizontal",
-            left:16,
-            bottom:14,
-            itemWidth:10,
-            itemHeight:90,
-            text:["作品多","作品少"],
-            textStyle:{ color:"#9096a5", fontSize:10.5 },
-            inRange:{ color:["#4a4f60","#6a7086","#c9a24b"] },
-            controller:{ inRange:{ color:["#4a4f60","#6a7086","#c9a24b"] } }
         },
         animationDurationUpdate:1000,
         animationEasingUpdate:"quinticInOut",
@@ -494,24 +531,35 @@ function renderGraph(rawActors, rawLinks){
             edgeSymbol:['none','none'],
             edgeSymbolSize:[0,0],
             label:{
-                show:true,
-                position:"inside",
-                color:"#0f1117",
-                fontWeight:600,
-                fontFamily:'"Noto Sans SC",sans-serif',
-                textBorderColor:"rgba(240,236,224,0.0)"
-            },
+    show:true,
+    position:"inside",
+    color:"#ffffff",
+    fontWeight:700,
+    fontFamily:'"Noto Sans SC",sans-serif',
+    textBorderColor:"rgba(232,185,110,0.9)",
+    textBorderWidth:2.5,
+    textShadowBlur:10,
+    textShadowColor:"rgba(232,185,110,0.85)"
+},
             itemStyle:{
-                borderColor:"rgba(240,236,224,0.35)",
-                borderWidth:1.5,
-                shadowColor:"rgba(201,162,75,0.25)",
-                shadowBlur:8
+               color: "transparent", // 内部完全镂空透明
+                borderColor:"#e8b96e",
+                borderWidth:4, // 圆环粗细，可自行调大/调小
+                shadowBlur:18,
+                shadowColor:"rgba(232,185,110,.6)"
             },
             emphasis:{
                 focus:"adjacency",
                 scale:1.08,
-                label:{ fontSize:15, color:"#0f1117" },
-                itemStyle:{ borderColor:"#c9a24b", borderWidth:2.5 },
+                label:{ 
+    fontSize:15, 
+    color:"#ffffff",
+    textShadowBlur:14,
+    textShadowColor:"rgba(232,185,110,1)"
+},
+                itemStyle:{  color: "transparent",
+                            borderColor:"#f5d088", 
+                            borderWidth:5  },
                 lineStyle:{ width:9, opacity:1 }
             },
             blur:{
@@ -535,9 +583,98 @@ function renderGraph(rawActors, rawLinks){
     };
     myChart.setOption(option, true);
 
-    if(focusedName){
+    if(filterThreshold > 0){
+        applyFilter(filterThreshold, filterMode);
+    }else if(focusedName){
         applyFocus(focusedName, true);
     }
+}
+
+// 合作次数筛选：高亮合作次数 == threshold（eq）或 >= threshold（gte）的演员对及其作品边
+function applyFilter(threshold, mode){
+    const highlightNodes = new Set();
+    const highlightLinkIdx = new Set();
+    pairMapCache.forEach((indexList, key)=>{
+        const cnt = indexList.length;
+        const hit = mode === 'eq' ? (cnt === threshold) : (cnt >= threshold);
+        if(hit){
+            const [a, b] = key.split('|');
+            highlightNodes.add(a);
+            highlightNodes.add(b);
+            indexList.forEach(i=>highlightLinkIdx.add(i));
+        }
+    });
+
+    const hasHighlight = highlightNodes.size > 0;
+
+    nodesCache.forEach(n=>{
+        const active = !hasHighlight || highlightNodes.has(n.name);
+        n.itemStyle = Object.assign({}, n._baseItemStyle, {
+            opacity: active ? 1 : 0.1,
+            color: "transparent",
+            borderColor: active ? "#e8b96e" : n._baseItemStyle.borderColor,
+            borderWidth: active ? 5 : n._baseItemStyle.borderWidth,
+            shadowBlur: active ? 24 : n._baseItemStyle.shadowBlur,
+            shadowColor: active ? "rgba(232,185,110,0.9)" : n._baseItemStyle.shadowColor
+        });
+        n.label = Object.assign({}, n._baseLabel, {
+            opacity: active ? 1 : 0.12,
+            color: active ? "#ffffff" : "transparent"
+        });
+        n.silent = !active;
+        n.emphasis = active ? undefined : { disabled:true };
+        n.tooltip = active ? undefined : { show:false };
+    });
+    linksCache.forEach((l, idx)=>{
+        const active = !hasHighlight || highlightLinkIdx.has(idx);
+        l.lineStyle = Object.assign({}, l._baseLineStyle, {
+            opacity: active ? 1 : 0.05,
+            width: active ? (l._baseLineStyle.width + 2.5) : l._baseLineStyle.width
+        });
+        l.silent = !active;
+        l.emphasis = active ? undefined : { disabled:true };
+        l.tooltip = active ? undefined : { show:false };
+        l.label = active
+            ? {
+                show:true,
+                fontSize:12,
+                fontWeight:700,
+                color:"#ffffff",
+                backgroundColor:"rgba(0,0,0,0.15)",
+                padding:[2,6],
+                borderRadius:4,
+                opacity:1
+            }
+            : { show:true, opacity:0.05 };
+    });
+    myChart.setOption({ series:[{ data: nodesCache, links: linksCache }] });
+
+    const hint = document.getElementById('filterHint');
+    if(threshold === 0){
+        hint.textContent = '高亮多次合作的演员与作品边';
+    }else if(!hasHighlight){
+        hint.textContent = mode === 'eq' ? `未找到合作恰为 ${threshold} 次的演员对` : `未找到合作 ≥ ${threshold} 次的演员对`;
+    }else{
+        hint.textContent = `已高亮 ${highlightNodes.size} 位演员、${highlightLinkIdx.size} 条作品边`;
+    }
+}
+
+function clearFilter(){
+    nodesCache.forEach(n=>{
+        n.itemStyle = Object.assign({}, n._baseItemStyle);
+        n.label = Object.assign({}, n._baseLabel);
+        n.silent = false;
+        n.emphasis = undefined;
+        n.tooltip = undefined;
+    });
+    linksCache.forEach(l=>{
+        l.lineStyle = Object.assign({}, l._baseLineStyle);
+        l.silent = false;
+        l.emphasis = undefined;
+        l.tooltip = undefined;
+        l.label = undefined;
+    });
+    myChart.setOption({ series:[{ data: nodesCache, links: linksCache }] });
 }
 
 // 手动按透明度实现高亮（比 dispatchAction focusNodeAdjacency 更可靠，
@@ -546,8 +683,14 @@ function applyFocus(name){
     const connected = adjacencyCache.get(name) || new Set();
     nodesCache.forEach(n=>{
         const active = n.name === name || connected.has(n.name);
-        n.itemStyle = Object.assign({}, n.itemStyle, { opacity: active ? 1 : 0.1 });
-        n.label = Object.assign({}, n.label, { opacity: active ? 1 : 0.12 });
+        n.itemStyle = Object.assign({}, n._baseItemStyle, {
+            opacity: active ? 1 : 0.1,
+            color: "transparent"
+        });
+        n.label = Object.assign({}, n._baseLabel, {
+            opacity: active ? 1 : 0.12,
+            color: active ? "#ffffff" : "transparent"
+        });
         n.silent = !active;
         // 关键：不仅要压暗，还要彻底关闭暗淡节点的悬停响应，
         // 否则原生的 emphasis:'adjacency' 仍会在划过时把它们点亮，抢走高亮效果
@@ -556,9 +699,9 @@ function applyFocus(name){
     });
     linksCache.forEach(l=>{
         const active = l.source === name || l.target === name;
-        l.lineStyle = Object.assign({}, l.lineStyle, {
-            opacity: active ? l._baseOpacity : 0.04,
-            width: active ? l._baseWidth + 3.5 : l._baseWidth
+        l.lineStyle = Object.assign({}, l._baseLineStyle, {
+            opacity: active ? l._baseLineStyle.opacity : 0.04,
+            width: active ? l._baseLineStyle.width + 3.5 : l._baseLineStyle.width
         });
         l.silent = !active;
         l.emphasis = active ? undefined : { disabled:true };
@@ -568,8 +711,8 @@ function applyFocus(name){
                 show:true,
                 fontSize:13,
                 fontWeight:700,
-                color:"#1b1305",
-                backgroundColor:"#c9a24b",
+                color:"#06231f",
+                backgroundColor:"#5eead4",
                 padding:[3,8],
                 borderRadius:4,
                 opacity:1
@@ -581,14 +724,14 @@ function applyFocus(name){
 
 function clearFocus(){
     nodesCache.forEach(n=>{
-        n.itemStyle = Object.assign({}, n.itemStyle, { opacity: 1 });
-        n.label = Object.assign({}, n.label, { opacity: 1 });
+        n.itemStyle = Object.assign({}, n._baseItemStyle);
+        n.label = Object.assign({}, n._baseLabel);
         n.silent = false;
         n.emphasis = undefined;
         n.tooltip = undefined;
     });
     linksCache.forEach(l=>{
-        l.lineStyle = Object.assign({}, l.lineStyle, { opacity: l._baseOpacity, width: l._baseWidth });
+        l.lineStyle = Object.assign({}, l._baseLineStyle);
         l.silent = false;
         l.emphasis = undefined;
         l.tooltip = undefined;
@@ -605,6 +748,12 @@ const searchHint = document.getElementById('searchHint');
 searchInput.addEventListener('input', (e)=>{
     const val = e.target.value.trim();
     clearSearch.classList.toggle('show', !!val);
+    if(val){
+        // 输入搜索时取消筛选，避免相互冲突
+        if(filterThreshold !== 0){
+            setFilterThreshold(0);
+        }
+    }
     if(!val){
         clearFocus();
         focusedName = null;
@@ -631,6 +780,35 @@ clearSearch.addEventListener('click', ()=>{
 
 // 重载按钮
 document.getElementById('reloadBtn').addEventListener('click', loadAndRender);
+
+// 筛选按钮
+function setFilterThreshold(t, mode){
+    filterThreshold = t;
+    filterMode = mode || 'gte';
+    document.querySelectorAll('.filter-btn').forEach(btn=>{
+        btn.classList.toggle('active', Number(btn.dataset.threshold) === t);
+    });
+    if(t === 0){
+        clearFilter();
+        document.getElementById('filterHint').textContent = '高亮多次合作的演员与作品边';
+    }else{
+        // 切换到筛选时，清空搜索
+        if(searchInput.value){
+            searchInput.value = '';
+            clearSearch.classList.remove('show');
+            searchHint.textContent = '';
+            focusedName = null;
+        }
+        applyFilter(t, filterMode);
+    }
+}
+document.querySelectorAll('.filter-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+        const t = Number(btn.dataset.threshold);
+        const m = btn.dataset.mode || 'gte';
+        setFilterThreshold(t, m);
+    });
+});
 
 // 页面初始化加载数据
 window.addEventListener('load', loadAndRender);

@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>演员合作力导向图 · 数据可视化</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+:root{
+    --stage-bg-1:#0b0c12;
+    --stage-bg-2:#05060a;
+    --panel-bg:#12141c;
+    --panel-bg-2:#191c26;
+    --hairline:rgba(201,162,75,0.16);
+    --gold:#c9a24b;
+    --gold-soft:rgba(201,162,75,0.55);
+    --gold-dim:rgba(201,162,75,0.12);
+    --ink:#f0ece0;
+    --ink-dim:#9096a5;
+    --ink-faint:#5d6272;
+    --lead-red:#d6524a;
+    --support-gray:#6a7086;
+    --radius:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+    display:flex;
+    height:100vh;
+    overflow:hidden;
+    font-family:"Noto Sans SC",sans-serif;
+    background:var(--stage-bg-2);
+}
+
+/* ============ 左侧面板 ============ */
+.left-panel-wrap{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    width:44px;
+    background:var(--panel-bg);
+    border-right:1px solid var(--hairline);
+    transition:width 0.38s cubic-bezier(.65,0,.35,1);
+    overflow:hidden;
+    z-index:5;
+}
+.left-panel-wrap.expand{
+    width:340px;
+}
+
+.toggle-bar{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:100%;
+    height:44px;
+    min-height:44px;
+    background:linear-gradient(180deg,var(--panel-bg-2),var(--panel-bg));
+    color:var(--gold);
+    cursor:pointer;
+    user-select:none;
+    border-bottom:1px solid var(--hairline);
+    font-size:13px;
+    letter-spacing:1px;
+    white-space:nowrap;
+}
+.toggle-bar:hover{ background:var(--gold-dim); }
+.reel{
+    width:16px;height:16px;border-radius:50%;
+    border:2px solid var(--gold);
+    position:relative;
+    flex:none;
+}
+.reel::before,.reel::after{
+    content:"";
+    position:absolute;
+    width:3px;height:3px;
+    background:var(--gold);
+    border-radius:50%;
+}
+.reel::before{ top:1px; left:5px; }
+.reel::after{ bottom:1px; right:5px; }
+
+.left-panel{
+    padding:20px 18px 16px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    height:calc(100% - 44px);
+    overflow-y:auto;
+}
+.left-panel::-webkit-scrollbar{ width:6px; }
+.left-panel::-webkit-scrollbar-thumb{ background:var(--hairline); border-radius:3px; }
+
+.brand{ display:flex; flex-direction:column; gap:4px; }
+.brand h1{
+    font-family:"Noto Serif SC",serif;
+    font-weight:700;
+    font-size:20px;
+    color:var(--ink);
+    letter-spacing:1px;
+}
+.brand p{
+    font-size:11.5px;
+    color:var(--ink-faint);
+    letter-spacing:2px;
+    text-transform:uppercase;
+}
+
+.divider{ height:1px; background:var(--hairline); border:none; }
+
+/* 统计卡片 */
+.stats-row{ display:flex; gap:10px; }
+.stat-card{
+    flex:1;
+    background:var(--panel-bg-2);
+    border:1px solid var(--hairline);
+    border-radius:var(--radius);
+    padding:10px 12px;
+}
+.stat-card .num{
+    font-family:"JetBrains Mono",monospace;
+    font-size:22px;
+    font-weight:600;
+    color:var(--gold);
+    line-height:1.1;
+}
+.stat-card .label{
+    margin-top:4px;
+    font-size:11px;
+    color:var(--ink-dim);
+    letter-spacing:0.5px;
+}
+
+/* 区块标题 */
+.section-title{
+    font-size:11.5px;
+    color:var(--ink-faint);
+    letter-spacing:2px;
+    text-transform:uppercase;
+    margin-bottom:2px;
+}
+
+/* 搜索框 */
+.search-wrap{ position:relative; }
+.search-wrap input{
+    width:100%;
+    height:38px;
+    background:var(--panel-bg-2);
+    border:1px solid var(--hairline);
+    border-radius:var(--radius);
+    color:var(--ink);
+    font-size:13px;
+    padding:0 34px 0 12px;
+    outline:none;
+    transition:border-color .2s;
+}
+.search-wrap input::placeholder{ color:var(--ink-faint); }
+.search-wrap input:focus{ border-color:var(--gold-soft); }
+.search-wrap .clear-x{
+    position:absolute; right:10px; top:50%; transform:translateY(-50%);
+    color:var(--ink-faint); cursor:pointer; font-size:15px; display:none;
+}
+.search-wrap .clear-x.show{ display:block; }
+.search-hint{ font-size:11px; color:var(--ink-faint); }
+
+/* 图例 */
+.legend-list{ display:flex; flex-direction:column; gap:9px; }
+.legend-item{ display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--ink-dim); }
+.legend-swatch{ flex:none; width:22px; height:0; border-top-width:4px; border-top-style:solid; border-radius:2px; }
+.legend-swatch.lead{ border-color:var(--lead-red); }
+.legend-swatch.support{ border-color:var(--support-gray); }
+.legend-dot-scale{
+    flex:none;
+    display:flex; align-items:center; gap:4px;
+}
+.legend-dot-scale span{ border-radius:50%; background:linear-gradient(135deg,var(--support-gray),var(--gold)); display:block; }
+.legend-dot-scale span:nth-child(1){ width:8px; height:8px; }
+.legend-dot-scale span:nth-child(2){ width:13px; height:13px; }
+.legend-dot-scale span:nth-child(3){ width:19px; height:19px; }
+
+/* 按钮 */
+button{
+    width:100%;
+    height:40px;
+    border:1px solid var(--gold-soft);
+    border-radius:var(--radius);
+    cursor:pointer;
+    font-size:13.5px;
+    letter-spacing:1px;
+    background:transparent;
+    color:var(--gold);
+    transition:background .2s, color .2s;
+    font-family:"Noto Sans SC",sans-serif;
+}
+#reloadBtn:hover{ background:var(--gold); color:#1b1305; }
+
+.desc{
+    font-size:11.5px;
+    color:var(--ink-faint);
+    line-height:1.9;
+}
+.desc b{ color:var(--ink-dim); font-weight:500; }
+
+.panel-footer{
+    margin-top:auto;
+    font-size:10.5px;
+    color:var(--ink-faint);
+    line-height:1.7;
+    border-top:1px solid var(--hairline);
+    padding-top:12px;
+}
+
+/* ============ 舞台 / 图表区 ============ */
+.stage{
+    position:relative;
+    flex:1;
+    height:100%;
+    background:
+        radial-gradient(ellipse 70% 60% at 50% 42%, rgba(201,162,75,0.07), transparent 70%),
+        radial-gradient(ellipse 120% 90% at 50% 50%, var(--stage-bg-1), var(--stage-bg-2));
+}
+.stage::before{
+    /* 舞台聚光灯竖向暗角 */
+    content:"";
+    position:absolute; inset:0;
+    box-shadow:inset 0 0 140px 40px rgba(0,0,0,0.55);
+    pointer-events:none;
+    z-index:2;
+}
+#chart{ position:absolute; inset:0; }
+
+.empty-state{
+    position:absolute; inset:0;
+    display:none;
+    align-items:center; justify-content:center;
+    flex-direction:column;
+    gap:10px;
+    color:var(--ink-faint);
+    font-size:13px;
+    z-index:3;
+}
+.empty-state.show{ display:flex; }
+.empty-state .title{ color:var(--ink-dim); font-size:15px; font-family:"Noto Serif SC",serif; }
+</style>
+</head>
+<body>
+
+<div class="left-panel-wrap" id="panelWrap">
+    <div class="toggle-bar" id="toggleBtn">
+        <span class="reel"></span>
+        <span id="toggleLabel"></span>
+    </div>
+    <div class="left-panel">
+        <div class="brand">
+            <h1>演员合作网络</h1>
+            <p>Collaboration Graph</p>
+        </div>
+
+        <hr class="divider">
+
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="num" id="statActors">--</div>
+                <div class="label">演员总数</div>
+            </div>
+            <div class="stat-card">
+                <div class="num" id="statLinks">--</div>
+                <div class="label">合作关系</div>
+            </div>
+        </div>
+
+        <div>
+            <div class="section-title">查找演员</div>
+            <div class="search-wrap" style="margin-top:8px;">
+                <input type="text" id="searchInput" placeholder="输入姓名，高亮其合作网络">
+                <span class="clear-x" id="clearSearch">✕</span>
+            </div>
+            <div class="search-hint" id="searchHint" style="margin-top:6px;"></div>
+        </div>
+
+        <div>
+            <div class="section-title">图例</div>
+            <div class="legend-list" style="margin-top:10px;">
+                <div class="legend-item"><span class="legend-swatch lead"></span>双主角合作作品</div>
+                <div class="legend-item"><span class="legend-swatch support"></span>含配角的合作</div>
+                <div class="legend-item">
+                    <span class="legend-dot-scale"><span></span><span></span><span></span></span>
+                    节点大小 / 颜色 = 参演作品数
+                </div>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <button id="reloadBtn">重载图表</button>
+
+        <div class="desc">
+            <b>说明</b><br>
+            数据从同目录 data.json 读取，修改后点击「重载图表」。<br><br>
+            · 双人多部合作自动散开曲线，避免重叠<br>
+            · 悬停节点可聚焦其合作关系，其余变暗<br>
+            · 连线文字为合作作品名<br>
+            · 滚轮缩放，拖拽平移
+        </div>
+
+        <div class="panel-footer">
+            需通过本地 Web 服务打开（非 file://），否则读取 data.json 会跨域失败。
+        </div>
+    </div>
+</div>
+
+<div class="stage">
+    <div id="chart"></div>
+    <div class="empty-state" id="emptyState">
+        <div class="title">暂无数据</div>
+        <div>请检查 data.json 是否与本页面位于同一目录</div>
+    </div>
+</div>
+
+<script>
+const chartDom = document.getElementById('chart');
+const myChart = echarts.init(chartDom);
+const panelWrap = document.getElementById('panelWrap');
+const toggleBtn = document.getElementById('toggleBtn');
+const toggleLabel = document.getElementById('toggleLabel');
+const emptyState = document.getElementById('emptyState');
+let isCollapse = true;
+
+function setToggleLabel(){
+    toggleLabel.textContent = isCollapse ? '' : '折叠面板 ◀';
+}
+setToggleLabel();
+
+toggleBtn.addEventListener('click', ()=>{
+    isCollapse = !isCollapse;
+    panelWrap.classList.toggle('expand', !isCollapse);
+    setToggleLabel();
+    setTimeout(()=>myChart.resize(), 400);
+});
+
+let nodesCache = [];
+let linksCache = [];
+let adjacencyCache = new Map();
+let focusedName = null;
+
+// 读取外部json并渲染
+async function loadAndRender() {
+    try {
+        const res = await fetch("./data.json");
+        if (!res.ok) throw new Error("读取data.json失败，请确保文件和html同目录，用本地服务打开");
+        const data = await res.json();
+        if(!data.actors || !data.actors.length){
+            emptyState.classList.add('show');
+            return;
+        }
+        emptyState.classList.remove('show');
+        renderGraph(data.actors, data.links || []);
+    } catch (err) {
+        emptyState.classList.add('show');
+        alert("加载外部数据失败：" + err.message + "\n提示：直接打开本地文件会跨域，需要用本地web服务运行");
+        console.error(err);
+    }
+}
+
+function renderGraph(rawActors, rawLinks){
+    // 统计参演作品数
+    const workCount = {};
+    rawActors.forEach(item=>workCount[item.name]=0);
+    rawLinks.forEach(link=>{
+        workCount[link.source] = (workCount[link.source]||0) + 1;
+        workCount[link.target] = (workCount[link.target]||0) + 1;
+    });
+
+    // 生成节点尺寸 + 数值（用于颜色映射）
+    const nodes = rawActors.map(actor=>{
+        const cnt = workCount[actor.name] || 0;
+        const size = Math.min(28 + cnt * 11, 88);
+        return {
+            name: actor.name,
+            symbolSize: size,
+            value: cnt,
+            totalWork: cnt,
+            label:{
+                fontSize: Math.min(11 + cnt, 16)
+            }
+        }
+    });
+    nodesCache = nodes;
+
+    const counts = nodes.map(n=>n.totalWork);
+    const maxWork = Math.max(1, ...counts);
+
+    // 更新统计面板
+    document.getElementById('statActors').textContent = nodes.length;
+    document.getElementById('statLinks').textContent = rawLinks.length;
+
+    // 同组演员分配差异化曲率防重叠
+    const pairMap = new Map();
+    rawLinks.forEach((link, idx)=>{
+        const names = [link.source, link.target].sort();
+        const key = names.join('|');
+        if(!pairMap.has(key)) pairMap.set(key, []);
+        pairMap.get(key).push(idx);
+    });
+
+    const curveConfig = {};
+    pairMap.forEach((indexList, key)=>{
+        const len = indexList.length;
+        if(len === 1){
+            curveConfig[key] = [0.12];
+        }else{
+            const maxCurve = 0.42;
+            const step = maxCurve * 2 / (len - 1);
+            const curves = [];
+            for(let i=0;i<len;i++){
+                curves.push(-maxCurve + i * step);
+            }
+            curveConfig[key] = curves;
+        }
+    });
+
+    // 组装连线样式
+    const links = rawLinks.map((link, idx)=>{
+        const isLead = link.sourceRole === "主役" && link.targetRole === "主役";
+        const lineStyle = isLead
+            ? { width:5.5, color:"#d6524a", opacity:0.8 }
+            : { width:3.5, color:"#6a7086", opacity:0.65 };
+
+        const names = [link.source, link.target].sort();
+        const key = names.join('|');
+        const arr = pairMap.get(key);
+        const pos = arr.indexOf(idx);
+        lineStyle.curveness = curveConfig[key][pos];
+        return {...link, lineStyle, _baseOpacity: lineStyle.opacity, _baseWidth: lineStyle.width}
+    });
+    linksCache = links;
+
+    // 构建邻接表，供搜索高亮使用
+    adjacencyCache = new Map();
+    links.forEach(l=>{
+        if(!adjacencyCache.has(l.source)) adjacencyCache.set(l.source, new Set());
+        if(!adjacencyCache.has(l.target)) adjacencyCache.set(l.target, new Set());
+        adjacencyCache.get(l.source).add(l.target);
+        adjacencyCache.get(l.target).add(l.source);
+    });
+
+    const option = {
+        backgroundColor:"transparent",
+        tooltip:{
+            trigger:"item",
+            backgroundColor:"rgba(18,20,28,0.94)",
+            borderColor:"rgba(201,162,75,0.4)",
+            borderWidth:1,
+            padding:[10,14],
+            extraCssText:"border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.45);",
+            textStyle:{ color:"#f0ece0", fontSize:12.5, fontFamily:'"Noto Sans SC",sans-serif' },
+            formatter(params){
+                if(params.dataType === 'node'){
+                    return `<div style="font-family:'Noto Serif SC',serif;font-size:14px;color:#c9a24b;margin-bottom:4px;">${params.data.name}</div>参演作品总数：<b style="color:#f0ece0;">${params.data.totalWork}</b> 部`;
+                }
+                const d = params.data;
+                return `<div style="font-family:'Noto Serif SC',serif;font-size:13.5px;color:#c9a24b;margin-bottom:6px;">${d.workName || '合作作品'}</div>${d.source}：${d.sourceRole || '—'}<br>${d.target}：${d.targetRole || '—'}`;
+            }
+        },
+        visualMap:{
+            type:"continuous",
+            min:0,
+            max:maxWork,
+            dimension:0,
+            seriesIndex:0,
+            calculable:false,
+            orient:"horizontal",
+            left:16,
+            bottom:14,
+            itemWidth:10,
+            itemHeight:90,
+            text:["作品多","作品少"],
+            textStyle:{ color:"#9096a5", fontSize:10.5 },
+            inRange:{ color:["#4a4f60","#6a7086","#c9a24b"] },
+            controller:{ inRange:{ color:["#4a4f60","#6a7086","#c9a24b"] } }
+        },
+        animationDurationUpdate:1000,
+        animationEasingUpdate:"quinticInOut",
+        series:[{
+            type:"graph",
+            layout:"force",
+            force:{ repulsion:550, edgeLength:200, gravity:0.08 },
+            roam:true,
+            zoom:1,
+            draggable:true,
+            edgeSymbol:['none','none'],
+            edgeSymbolSize:[0,0],
+            label:{
+                show:true,
+                position:"inside",
+                color:"#0f1117",
+                fontWeight:600,
+                fontFamily:'"Noto Sans SC",sans-serif',
+                textBorderColor:"rgba(240,236,224,0.0)"
+            },
+            itemStyle:{
+                borderColor:"rgba(240,236,224,0.35)",
+                borderWidth:1.5,
+                shadowColor:"rgba(201,162,75,0.25)",
+                shadowBlur:8
+            },
+            emphasis:{
+                focus:"adjacency",
+                scale:1.08,
+                label:{ fontSize:15, color:"#0f1117" },
+                itemStyle:{ borderColor:"#c9a24b", borderWidth:2.5 },
+                lineStyle:{ width:9, opacity:1 }
+            },
+            blur:{
+                itemStyle:{ opacity:0.15 },
+                lineStyle:{ opacity:0.08 },
+                label:{ opacity:0.15 }
+            },
+            edgeLabel:{
+                show:true,
+                fontSize:9.5,
+                color:"#b8bdca",
+                backgroundColor:"rgba(11,12,18,0.72)",
+                padding:[2,5],
+                borderRadius:3,
+                formatter(params){ return params.data.workName || ''; },
+                distance:12
+            },
+            data:nodes,
+            links:links
+        }]
+    };
+    myChart.setOption(option, true);
+
+    if(focusedName){
+        applyFocus(focusedName, true);
+    }
+}
+
+// 手动按透明度实现高亮（比 dispatchAction focusNodeAdjacency 更可靠，
+// 不依赖 ECharts 内部按 name 查找节点的行为）
+function applyFocus(name){
+    const connected = adjacencyCache.get(name) || new Set();
+    nodesCache.forEach(n=>{
+        const active = n.name === name || connected.has(n.name);
+        n.itemStyle = Object.assign({}, n.itemStyle, { opacity: active ? 1 : 0.1 });
+        n.label = Object.assign({}, n.label, { opacity: active ? 1 : 0.12 });
+        n.silent = !active;
+        // 关键：不仅要压暗，还要彻底关闭暗淡节点的悬停响应，
+        // 否则原生的 emphasis:'adjacency' 仍会在划过时把它们点亮，抢走高亮效果
+        n.emphasis = active ? undefined : { disabled:true };
+        n.tooltip = active ? undefined : { show:false };
+    });
+    linksCache.forEach(l=>{
+        const active = l.source === name || l.target === name;
+        l.lineStyle = Object.assign({}, l.lineStyle, {
+            opacity: active ? l._baseOpacity : 0.04,
+            width: active ? l._baseWidth + 3.5 : l._baseWidth
+        });
+        l.silent = !active;
+        l.emphasis = active ? undefined : { disabled:true };
+        l.tooltip = active ? undefined : { show:false };
+        l.label = active
+            ? {
+                show:true,
+                fontSize:13,
+                fontWeight:700,
+                color:"#1b1305",
+                backgroundColor:"#c9a24b",
+                padding:[3,8],
+                borderRadius:4,
+                opacity:1
+            }
+            : { show:true, opacity:0.05 };
+    });
+    myChart.setOption({ series:[{ data: nodesCache, links: linksCache }] });
+}
+
+function clearFocus(){
+    nodesCache.forEach(n=>{
+        n.itemStyle = Object.assign({}, n.itemStyle, { opacity: 1 });
+        n.label = Object.assign({}, n.label, { opacity: 1 });
+        n.silent = false;
+        n.emphasis = undefined;
+        n.tooltip = undefined;
+    });
+    linksCache.forEach(l=>{
+        l.lineStyle = Object.assign({}, l.lineStyle, { opacity: l._baseOpacity, width: l._baseWidth });
+        l.silent = false;
+        l.emphasis = undefined;
+        l.tooltip = undefined;
+        l.label = undefined;
+    });
+    myChart.setOption({ series:[{ data: nodesCache, links: linksCache }] });
+}
+
+// 搜索交互
+const searchInput = document.getElementById('searchInput');
+const clearSearch = document.getElementById('clearSearch');
+const searchHint = document.getElementById('searchHint');
+
+searchInput.addEventListener('input', (e)=>{
+    const val = e.target.value.trim();
+    clearSearch.classList.toggle('show', !!val);
+    if(!val){
+        clearFocus();
+        focusedName = null;
+        searchHint.textContent = '';
+        return;
+    }
+    const match = nodesCache.find(n=>n.name.includes(val));
+    if(match){
+        focusedName = match.name;
+        applyFocus(match.name);
+        searchHint.textContent = `已聚焦「${match.name}」的合作网络`;
+    }else{
+        clearFocus();
+        focusedName = null;
+        searchHint.textContent = '未找到匹配演员';
+    }
+});
+
+clearSearch.addEventListener('click', ()=>{
+    searchInput.value = '';
+    searchInput.dispatchEvent(new Event('input'));
+    searchInput.focus();
+});
+
+// 重载按钮
+document.getElementById('reloadBtn').addEventListener('click', loadAndRender);
+
+// 页面初始化加载数据
+window.addEventListener('load', loadAndRender);
+window.addEventListener('resize', ()=>myChart.resize());
+</script>
+</body>
+</html>

@@ -25,9 +25,17 @@
   {"name":"地狱冥想的自嘲"},
   {"name":"薄凉"},
   {"name":"亦之紫F"},
+  {"name":"秋木"},
   {"name":"牧野冥姬"}
   ],
   "links": [
+    {
+    "source":"风镜",
+    "target":"秋木",
+    "workName":"探虚陵-洛神篇",
+    "sourceRole":"主役",
+    "targetRole":"主役"
+  },
     {
     "source":"风镜",
     "target":"陶典",

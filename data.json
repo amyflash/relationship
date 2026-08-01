@@ -26,7 +26,12 @@
   {"name":"薄凉"},
   {"name":"亦之紫F"},
   {"name":"秋木"},
-  {"name":"牧野冥姬"}
+  {"name":"牧野冥姬"},
+  {"name":"卿声隙语"},
+  {"name":"扶三苏"},
+  {"name":"雪夜"},
+  {"name":"青山隐"},
+  {"name":"萋萋"}
   ],
   "links": [
     {
@@ -299,6 +304,83 @@
     "source":"风镜",
     "target":"风镜",
     "workName":"夙书",
+    "sourceRole":"主役",
+    "targetRole":"主役"
+  },
+  {
+    "source":"风镜",
+    "target":"卿声隙语",
+    "workName":"等我打完这个本",
+    "sourceRole":"主役",
+    "targetRole":"主役"
+  },
+  {
+    "source":"风镜",
+    "target":"青衫隐",
+    "workName":"苒夏",
+    "sourceRole":"主役",
+    "targetRole":"主役"
+  },
+  {
+    "source":"风镜",
+    "target":"雪夜",
+    "workName":"花开无果",
+    "sourceRole":"主役",
+    "targetRole":"主役"
+  },
+  {
+    "source":"风镜",
+    "target":"卿声隙语",
+    "workName":"爱殇",
+    "sourceRole":"主役",
+    "targetRole":"主役"
+  },
+  {
+    "source":"风镜",
+    "target":"扶三苏",
+    "workName":"坛九小剧场",
+    "sourceRole":"主役",
+    "targetRole":"主役"
+  },
+  {
+    "source":"风镜",
+    "target":"韶小韶",
+    "workName":"破谍",
+    "sourceRole":"主役",
+    "targetRole":"主役"
+  },
+  {
+    "source":"风镜",
+    "target":"卿声隙语",
+    "workName":"出次轨能怎样",
+    "sourceRole":"主役",
+    "targetRole":"主役"
+  },
+  {
+    "source":"风镜",
+    "target":"杜冥鸦",
+    "workName":"70,80,90",
+    "sourceRole":"主役",
+    "targetRole":"主役"
+  },
+  {
+    "source":"风镜",
+    "target":"扶三苏",
+    "workName":"浮世花",
+    "sourceRole":"主役",
+    "targetRole":"主役"
+  },
+  {
+    "source":"风镜",
+    "target":"纪川久",
+    "workName":"食色",
+    "sourceRole":"主役",
+    "targetRole":"主役"
+  },
+  {
+    "source":"风镜",
+    "target":"萋萋",
+    "workName":"女博馆之百年逃婚记",
     "sourceRole":"主役",
     "targetRole":"主役"
   }

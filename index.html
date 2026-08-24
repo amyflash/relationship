@@ -332,6 +332,15 @@ button{
         </div>
 
         <div>
+            <div class="section-title">查找作品</div>
+            <div class="search-wrap" style="margin-top:8px;">
+                <input type="text" id="workSearchInput" placeholder="输入作品名，高亮相关演员">
+                <span class="clear-x" id="clearWorkSearch">✕</span>
+            </div>
+            <div class="search-hint" id="workSearchHint" style="margin-top:6px;"></div>
+        </div>
+
+        <div>
             <div class="section-title">图例</div>
             <div class="legend-list" style="margin-top:10px;">
                 <div class="legend-item"><span class="legend-swatch lead"></span>双主角合作作品</div>
@@ -413,6 +422,7 @@ let linksCache = [];
 let adjacencyCache = new Map();
 let pairMapCache = new Map();
 let focusedName = null;
+let focusedWork = null;
 let filterThreshold = 0;
 let filterMode = 'gte';
 
@@ -609,6 +619,8 @@ function renderGraph(rawActors, rawLinks){
         applyFilter(filterThreshold, filterMode);
     }else if(focusedName){
         applyFocus(focusedName, true);
+    }else if(focusedWork){
+        applyWorkFocus(focusedWork);
     }
 }
 
@@ -714,8 +726,6 @@ function applyFocus(name){
             color: active ? "#ffffff" : "transparent"
         });
         n.silent = !active;
-        // 关键：不仅要压暗，还要彻底关闭暗淡节点的悬停响应，
-        // 否则原生的 emphasis:'adjacency' 仍会在划过时把它们点亮，抢走高亮效果
         n.emphasis = active ? undefined : { disabled:true };
         n.tooltip = active ? undefined : { show:false };
     });
@@ -762,6 +772,62 @@ function clearFocus(){
     myChart.setOption({ series:[{ data: nodesCache, links: linksCache }] });
 }
 
+// 作品搜索高亮
+function applyWorkFocus(workName){
+    const matchedActors = new Set();
+    const matchedLinkIdx = new Set();
+    linksCache.forEach((l, idx)=>{
+        if(l.workName && l.workName.includes(workName)){
+            matchedActors.add(l.source);
+            matchedActors.add(l.target);
+            matchedLinkIdx.add(idx);
+        }
+    });
+    const hasMatch = matchedActors.size > 0;
+
+    nodesCache.forEach(n=>{
+        const active = hasMatch && matchedActors.has(n.name);
+        n.itemStyle = Object.assign({}, n._baseItemStyle, {
+            opacity: active ? 1 : 0.1,
+            color: "transparent"
+        });
+        n.label = Object.assign({}, n._baseLabel, {
+            opacity: active ? 1 : 0.12,
+            color: active ? "#ffffff" : "transparent"
+        });
+        n.silent = !active;
+        n.emphasis = active ? undefined : { disabled:true };
+        n.tooltip = active ? undefined : { show:false };
+    });
+    linksCache.forEach((l, idx)=>{
+        const active = hasMatch && matchedLinkIdx.has(idx);
+        l.lineStyle = Object.assign({}, l._baseLineStyle, {
+            opacity: active ? 1 : 0.04,
+            width: active ? l._baseLineStyle.width + 3.5 : l._baseLineStyle.width
+        });
+        l.silent = !active;
+        l.emphasis = active ? undefined : { disabled:true };
+        l.tooltip = active ? undefined : { show:false };
+        l.label = active
+            ? {
+                show:true,
+                fontSize:13,
+                fontWeight:700,
+                color:"#06231f",
+                backgroundColor:"#5eead4",
+                padding:[3,8],
+                borderRadius:4,
+                opacity:1
+            }
+            : { show:true, opacity:0.05 };
+    });
+    myChart.setOption({ series:[{ data: nodesCache, links: linksCache }] });
+}
+
+function clearWorkFocus(){
+    clearFocus();
+}
+
 // 搜索交互
 const searchInput = document.getElementById('searchInput');
 const clearSearch = document.getElementById('clearSearch');
@@ -774,6 +840,13 @@ searchInput.addEventListener('input', (e)=>{
         // 输入搜索时取消筛选，避免相互冲突
         if(filterThreshold !== 0){
             setFilterThreshold(0);
+        }
+        // 清除作品搜索
+        if(focusedWork){
+            focusedWork = null;
+            workSearchInput.value = '';
+            clearWorkSearch.classList.remove('show');
+            workSearchHint.textContent = '';
         }
     }
     if(!val){
@@ -800,6 +873,52 @@ clearSearch.addEventListener('click', ()=>{
     searchInput.focus();
 });
 
+// 作品搜索交互
+const workSearchInput = document.getElementById('workSearchInput');
+const clearWorkSearch = document.getElementById('clearWorkSearch');
+const workSearchHint = document.getElementById('workSearchHint');
+
+workSearchInput.addEventListener('input', (e)=>{
+    const val = e.target.value.trim();
+    clearWorkSearch.classList.toggle('show', !!val);
+    if(val){
+        // 清除演员搜索和筛选
+        if(filterThreshold !== 0){
+            setFilterThreshold(0);
+        }
+        if(focusedName){
+            focusedName = null;
+            searchInput.value = '';
+            clearSearch.classList.remove('show');
+            searchHint.textContent = '';
+        }
+    }
+    if(!val){
+        clearWorkFocus();
+        focusedWork = null;
+        workSearchHint.textContent = '';
+        return;
+    }
+    const matchedLinks = linksCache.filter(l=>l.workName && l.workName.includes(val));
+    if(matchedLinks.length > 0){
+        focusedWork = val;
+        applyWorkFocus(val);
+        const actors = new Set();
+        matchedLinks.forEach(l=>{ actors.add(l.source); actors.add(l.target); });
+        workSearchHint.textContent = `找到 ${matchedLinks.length} 部作品，涉及 ${actors.size} 位演员`;
+    }else{
+        clearWorkFocus();
+        focusedWork = null;
+        workSearchHint.textContent = '未找到匹配作品';
+    }
+});
+
+clearWorkSearch.addEventListener('click', ()=>{
+    workSearchInput.value = '';
+    workSearchInput.dispatchEvent(new Event('input'));
+    workSearchInput.focus();
+});
+
 // 重载按钮
 document.getElementById('reloadBtn').addEventListener('click', loadAndRender);
 
@@ -820,6 +939,12 @@ function setFilterThreshold(t, mode){
             clearSearch.classList.remove('show');
             searchHint.textContent = '';
             focusedName = null;
+        }
+        if(workSearchInput.value){
+            workSearchInput.value = '';
+            clearWorkSearch.classList.remove('show');
+            workSearchHint.textContent = '';
+            focusedWork = null;
         }
         applyFilter(t, filterMode);
     }

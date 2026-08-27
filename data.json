@@ -30,9 +30,17 @@
   {"name":"卿声隙语"},
   {"name":"扶三苏"},
   {"name":"雪夜"},
+  {"name":"陆庚宜"},
   {"name":"萋萋"}
   ],
   "links": [
+    {
+    "source":"风镜",
+    "target":"陆庚宜",
+    "workName":"冬日花火",
+    "sourceRole":"主役",
+    "targetRole":"主役"
+  },
     {
     "source":"风镜",
     "target":"秋木",
